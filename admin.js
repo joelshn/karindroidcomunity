@@ -341,9 +341,15 @@ function generateId() {
 
 async function readJSONFile(filePath) {
   try {
+    const token = getGitHubToken()
+    if (!token) {
+      console.error("GitHub token not configured")
+      return filePath.includes("participants") ? {} : []
+    }
+
     const response = await fetch(`https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/${filePath}`, {
       headers: {
-        Authorization: `token ${getGitHubToken()}`,
+        Authorization: `token ${token}`,
         Accept: "application/vnd.github.v3+json",
       },
     })
@@ -370,8 +376,7 @@ async function writeJSONFile(filePath, data) {
   try {
     const token = getGitHubToken()
     if (!token) {
-      showMessage("Token de GitHub no configurado. Ve a la consola para configurarlo.", "error")
-      console.log('Para configurar el token de GitHub, ejecuta: localStorage.setItem("github_token", "tu_token_aqui")')
+      showMessage("Token de GitHub no configurado. Configúralo primero.", "error")
       return false
     }
 
@@ -411,9 +416,16 @@ async function writeJSONFile(filePath, data) {
       body: JSON.stringify(body),
     })
 
-    return response.ok
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("GitHub API Error:", errorData)
+      throw new Error(`GitHub API error: ${response.status}`)
+    }
+
+    return true
   } catch (error) {
     console.error("Error writing JSON file:", error)
+    showMessage(`Error al escribir archivo: ${error.message}`, "error")
     return false
   }
 }

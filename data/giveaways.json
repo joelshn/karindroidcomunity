@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "example001",
+    "name": "Dominus Empyreus",
+    "image": "https://tr.rbxcdn.com/38c6edcb50633730ff4cf39ac8859840/420/420/Hat/Png",
+    "endDate": "2024-12-31T23:59:59.000Z",
+    "description": "¡Sorteo especial de Dominus Empyreus! Un item legendario de Roblox.",
+    "createdAt": "2024-12-20T10:00:00.000Z"
+  }
+]
