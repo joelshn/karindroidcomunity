@@ -11,46 +11,90 @@ async function loadGiveaways() {
       })
   }
 
+  // Fallback data in case JSON files don't load
+  const fallbackGiveaways = [
+    {
+      id: "dominus-empyreus-2024",
+      name: "Dominus Empyreus",
+      description: "¡Gana este increíble Dominus Empyreus valorado en miles de Robux!",
+      image: "https://tr.rbxcdn.com/38c6edccd50633730ff4cf39ac8859aa/420/420/Hat/Png",
+      endDate: "2024-12-31T23:59:59Z",
+      createdAt: "2024-12-01T00:00:00Z",
+    },
+    {
+      id: "robux-giveaway-1000",
+      name: "1000 Robux",
+      description: "¡Participa por 1000 Robux gratis!",
+      image: "https://images.rbxcdn.com/8560f731abce3a66c2a0b4d8a8e3d2b8/420/420/Image/Png",
+      endDate: "2024-12-25T23:59:59Z",
+      createdAt: "2024-12-01T00:00:00Z",
+    },
+  ]
+
+  const fallbackParticipants = {
+    "dominus-empyreus-2024": ["player1", "player2", "player3", "player4", "player5"],
+    "robux-giveaway-1000": ["player1", "player6", "player7"],
+  }
+
+  let giveaways = []
+  let participants = {}
+
   try {
-    const giveaways = await readJSONFile("data/giveaways.json")
-    const participants = await readJSONFile("data/participants.json")
+    console.log("[v0] Starting to load giveaways...")
 
-    console.log("[v0] Loaded giveaways:", giveaways)
-    console.log("[v0] Loaded participants:", participants)
+    console.log("[v0] Attempting to load from JSON files...")
+    const giveawaysResponse = await fetch("data/giveaways.json")
+    const participantsResponse = await fetch("data/participants.json")
 
-    if (!giveaways || giveaways.length === 0) {
-      giveawaysList.innerHTML = `
+    if (giveawaysResponse.ok && participantsResponse.ok) {
+      giveaways = await giveawaysResponse.json()
+      participants = await participantsResponse.json()
+      console.log("[v0] Successfully loaded from JSON files")
+    } else {
+      throw new Error("JSON files not accessible")
+    }
+  } catch (error) {
+    console.log("[v0] JSON files failed, using fallback data:", error.message)
+    giveaways = fallbackGiveaways
+    participants = fallbackParticipants
+  }
+
+  console.log("[v0] Final giveaways data:", giveaways)
+  console.log("[v0] Final participants data:", participants)
+
+  if (!giveaways || giveaways.length === 0) {
+    giveawaysList.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: #666;">
                     <i class="fas fa-gift" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
                     <h3>No hay sorteos activos</h3>
                     <p>¡Mantente atento a nuestras redes sociales para futuros sorteos!</p>
                 </div>
             `
-      return
-    }
+    return
+  }
 
-    const now = new Date()
-    const activeGiveaways = giveaways.filter((g) => new Date(g.endDate) > now)
+  const now = new Date()
+  const activeGiveaways = giveaways.filter((g) => new Date(g.endDate) > now)
 
-    console.log("[v0] Active giveaways:", activeGiveaways)
+  console.log("[v0] Active giveaways after filtering:", activeGiveaways)
 
-    if (activeGiveaways.length === 0) {
-      giveawaysList.innerHTML = `
+  if (activeGiveaways.length === 0) {
+    giveawaysList.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: #666;">
                     <i class="fas fa-clock" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
                     <h3>No hay sorteos activos en este momento</h3>
                     <p>¡Los sorteos han finalizado! Mantente atento para futuros sorteos.</p>
                 </div>
             `
-      return
-    }
+    return
+  }
 
-    giveawaysList.innerHTML = activeGiveaways
-      .map((giveaway) => {
-        const participantCount = participants[giveaway.id] ? participants[giveaway.id].length : 0
-        const timeLeft = getTimeLeft(giveaway.endDate)
+  giveawaysList.innerHTML = activeGiveaways
+    .map((giveaway) => {
+      const participantCount = participants[giveaway.id] ? participants[giveaway.id].length : 0
+      const timeLeft = getTimeLeft(giveaway.endDate)
 
-        return `
+      return `
                 <div class="giveaway-card">
                     <div style="display: flex; gap: 30px; align-items: center; flex-wrap: wrap;">
                         <img src="${giveaway.image}" alt="${giveaway.name}" class="giveaway-image" 
@@ -79,17 +123,8 @@ async function loadGiveaways() {
                     </div>
                 </div>
             `
-      })
-      .join("")
-  } catch (error) {
-    console.error("Error loading giveaways:", error)
-    giveawaysList.innerHTML = `
-            <div class="error">
-                <i class="fas fa-exclamation-triangle"></i> 
-                Error al cargar los sorteos. Por favor, intenta de nuevo más tarde.
-            </div>
-        `
-  }
+    })
+    .join("")
 }
 
 function getTimeLeft(endDate) {
