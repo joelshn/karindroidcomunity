@@ -23,18 +23,25 @@ document.addEventListener("DOMContentLoaded", () => {
 const GITHUB_CONFIG = {
   owner: "joelshn", // Replace with your GitHub username
   repo: "karindroidcomunity", // Replace with your repository name
-  token: "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", // Replace with your GitHub token
+  get token() {
+    return localStorage.getItem("github_token") || "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" // Fallback to hardcoded token
+  },
   branch: "main",
 }
 
 // GitHub API functions
 async function githubRequest(endpoint, method = "GET", data = null) {
+  const token = GITHUB_CONFIG.token
+  if (!token || token === "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") {
+    throw new Error("GitHub token not configured")
+  }
+
   const url = `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${endpoint}`
 
   const options = {
     method,
     headers: {
-      Authorization: `token ${GITHUB_CONFIG.token}`,
+      Authorization: `token ${token}`,
       Accept: "application/vnd.github.v3+json",
       "Content-Type": "application/json",
     },
@@ -47,7 +54,7 @@ async function githubRequest(endpoint, method = "GET", data = null) {
   try {
     const response = await fetch(url, options)
     if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`)
+      throw new Error(`GitHub API error: ${response.status} - ${response.statusText}`)
     }
     return await response.json()
   } catch (error) {
@@ -62,8 +69,12 @@ async function readJSONFile(filename) {
     const content = atob(response.content)
     return JSON.parse(content)
   } catch (error) {
+    if (error.message.includes("404")) {
+      // File doesn't exist, return appropriate default
+      return filename.includes("participants") ? {} : []
+    }
     console.error(`Error reading ${filename}:`, error)
-    return null
+    return filename.includes("participants") ? {} : []
   }
 }
 
@@ -94,6 +105,9 @@ async function writeJSONFile(filename, data) {
     return true
   } catch (error) {
     console.error(`Error writing ${filename}:`, error)
+    if (error.message.includes("GitHub token not configured")) {
+      showMessage("Token de GitHub no configurado. Ve al panel de administración para configurarlo.", "error")
+    }
     return false
   }
 }
@@ -116,14 +130,30 @@ function generateId() {
 
 function showMessage(message, type = "success") {
   const messageDiv = document.createElement("div")
-  messageDiv.className = type
+  messageDiv.className = `message ${type}`
   messageDiv.innerHTML = `<i class="fas fa-${type === "success" ? "check-circle" : "exclamation-circle"}"></i> ${message}`
 
-  const container = document.querySelector(".container")
-  container.insertBefore(messageDiv, container.firstChild)
+  // Add styles for the message
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 1000;
+    max-width: 400px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    background: ${type === "success" ? "#28a745" : "#dc3545"};
+  `
+
+  document.body.appendChild(messageDiv)
 
   setTimeout(() => {
-    messageDiv.remove()
+    if (messageDiv.parentNode) {
+      messageDiv.remove()
+    }
   }, 5000)
 }
 

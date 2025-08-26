@@ -319,6 +319,9 @@ function copyWinnerInfo(winner, prize) {
 
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", () => {
+  // Check GitHub token configuration
+  checkGitHubToken()
+
   // Show first tab by default
   showTab("add-giveaway")
 
@@ -337,19 +340,121 @@ function generateId() {
 }
 
 async function readJSONFile(filePath) {
-  const response = await fetch(filePath)
-  return response.json()
+  try {
+    const response = await fetch(`https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/${filePath}`, {
+      headers: {
+        Authorization: `token ${getGitHubToken()}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    })
+
+    if (response.status === 404) {
+      // File doesn't exist, return empty array/object
+      return filePath.includes("participants") ? {} : []
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    const content = atob(data.content)
+    return JSON.parse(content)
+  } catch (error) {
+    console.error("Error reading JSON file:", error)
+    return filePath.includes("participants") ? {} : []
+  }
 }
 
 async function writeJSONFile(filePath, data) {
-  const response = await fetch(filePath, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  })
-  return response.ok
+  try {
+    const token = getGitHubToken()
+    if (!token) {
+      showMessage("Token de GitHub no configurado. Ve a la consola para configurarlo.", "error")
+      console.log('Para configurar el token de GitHub, ejecuta: localStorage.setItem("github_token", "tu_token_aqui")')
+      return false
+    }
+
+    // First, try to get the current file to get its SHA
+    let sha = null
+    try {
+      const currentFile = await fetch(`https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/${filePath}`, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      })
+
+      if (currentFile.ok) {
+        const currentData = await currentFile.json()
+        sha = currentData.sha
+      }
+    } catch (e) {
+      // File doesn't exist, that's ok
+    }
+
+    const content = btoa(JSON.stringify(data, null, 2))
+
+    const body = {
+      message: `Update ${filePath}`,
+      content: content,
+      ...(sha && { sha }),
+    }
+
+    const response = await fetch(`https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/${filePath}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+
+    return response.ok
+  } catch (error) {
+    console.error("Error writing JSON file:", error)
+    return false
+  }
+}
+
+function getGitHubToken() {
+  return localStorage.getItem("github_token")
+}
+
+function setGitHubToken() {
+  const token = prompt("Ingresa tu token de GitHub (se guardará localmente):")
+  if (token) {
+    localStorage.setItem("github_token", token)
+    showMessage("Token de GitHub configurado correctamente!", "success")
+  }
+}
+
+function checkGitHubToken() {
+  const token = getGitHubToken()
+  if (!token) {
+    const setupDiv = document.createElement("div")
+    setupDiv.innerHTML = `
+      <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; margin: 20px 0; border-radius: 10px;">
+        <h3><i class="fas fa-exclamation-triangle" style="color: #f39c12;"></i> Configuración Requerida</h3>
+        <p>Para que el panel de administración funcione, necesitas configurar un token de GitHub.</p>
+        <ol>
+          <li>Ve a <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings > Developer settings > Personal access tokens</a></li>
+          <li>Crea un nuevo token con permisos de "repo"</li>
+          <li>Copia el token y haz clic en el botón de abajo</li>
+        </ol>
+        <button class="btn-primary" onclick="setGitHubToken()">
+          <i class="fas fa-key"></i> Configurar Token de GitHub
+        </button>
+        <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+          <strong>Nota:</strong> También necesitas reemplazar "YOUR_USERNAME" y "YOUR_REPO" en el código con tu información real de GitHub.
+        </p>
+      </div>
+    `
+    document
+      .querySelector(".admin-container")
+      .insertBefore(setupDiv, document.querySelector(".admin-container").firstChild)
+  }
 }
 
 function showMessage(message, type) {
