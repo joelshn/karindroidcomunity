@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
 const GITHUB_CONFIG = {
   owner: "joelshn", // Replace with your GitHub username
   repo: "karindroidcomunity", // Replace with your repository name
-  token: "YOUR_GITHUB_TOKEN", // Replace with your GitHub token
+  token: "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", // Replace with your GitHub token
   branch: "main",
 }
 
