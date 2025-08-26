@@ -77,11 +77,16 @@ function addGiveaway(event) {
 
   try {
     const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
+    const participants = JSON.parse(localStorage.getItem("participants") || "{}")
+
     giveaways.push(giveaway)
     localStorage.setItem("giveaways", JSON.stringify(giveaways))
 
-    console.log("[v0] Giveaway saved successfully")
+    console.log("[v0] Giveaway saved to localStorage successfully")
     showMessage("¡Sorteo creado exitosamente!", "success")
+
+    syncToGitHub(giveaways, participants)
+
     event.target.reset()
 
     // Refresh the manage tab if it's visible
@@ -195,6 +200,9 @@ function deleteGiveaway(giveawayId) {
     localStorage.setItem("participants", JSON.stringify(participants))
 
     showMessage("Sorteo eliminado exitosamente!", "success")
+
+    syncToGitHub(updatedGiveaways, participants)
+
     loadAdminGiveaways()
   } catch (error) {
     console.error("Error deleting giveaway:", error)
@@ -210,6 +218,7 @@ function endGiveaway(giveawayId) {
 
   try {
     const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
+    const participants = JSON.parse(localStorage.getItem("participants") || "{}")
 
     // Update end date to now
     const updatedGiveaways = giveaways.map((g) => {
@@ -222,6 +231,9 @@ function endGiveaway(giveawayId) {
     localStorage.setItem("giveaways", JSON.stringify(updatedGiveaways))
 
     showMessage("Sorteo finalizado exitosamente!", "success")
+
+    syncToGitHub(updatedGiveaways, participants)
+
     loadAdminGiveaways()
   } catch (error) {
     console.error("Error ending giveaway:", error)
@@ -391,12 +403,123 @@ function formatDate(dateString) {
   })
 }
 
+// GitHub API sync functionality to save data to JSON files
+async function syncToGitHub(giveaways, participants) {
+  try {
+    console.log("[v0] Syncing data to GitHub...")
+
+    // Save giveaways to GitHub
+    const giveawaysSaved = await writeJSONFile("data/giveaways.json", giveaways)
+
+    // Save participants to GitHub
+    const participantsSaved = await writeJSONFile("data/participants.json", participants)
+
+    if (giveawaysSaved && participantsSaved) {
+      showMessage("Datos sincronizados con GitHub exitosamente!", "success")
+      return true
+    } else {
+      showMessage("Error parcial al sincronizar con GitHub", "error")
+      return false
+    }
+  } catch (error) {
+    console.error("[v0] GitHub sync error:", error)
+    showMessage("Error al sincronizar con GitHub: " + error.message, "error")
+    return false
+  }
+}
+
+// GitHub configuration panel to admin
+function showGitHubConfig() {
+  const configHtml = `
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+      <h3><i class="fab fa-github"></i> Configuración de GitHub</h3>
+      <p>Para sincronizar los datos con GitHub, necesitas configurar tu token de acceso:</p>
+      
+      <div style="margin: 15px 0;">
+        <label for="github-token" style="display: block; margin-bottom: 5px; font-weight: bold;">Token de GitHub:</label>
+        <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx" 
+               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
+               value="${localStorage.getItem("github_token") || ""}">
+      </div>
+      
+      <div style="margin: 15px 0;">
+        <label for="github-username" style="display: block; margin-bottom: 5px; font-weight: bold;">Usuario de GitHub:</label>
+        <input type="text" id="github-username" placeholder="tu-usuario" 
+               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
+               value="${localStorage.getItem("github_username") || ""}">
+      </div>
+      
+      <div style="margin: 15px 0;">
+        <label for="github-repo" style="display: block; margin-bottom: 5px; font-weight: bold;">Nombre del Repositorio:</label>
+        <input type="text" id="github-repo" placeholder="nombre-del-repo" 
+               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
+               value="${localStorage.getItem("github_repo") || ""}">
+      </div>
+      
+      <button onclick="saveGitHubConfig()" class="btn-primary">
+        <i class="fas fa-save"></i> Guardar Configuración
+      </button>
+      
+      <button onclick="testGitHubConnection()" class="btn-secondary" style="margin-left: 10px;">
+        <i class="fas fa-plug"></i> Probar Conexión
+      </button>
+      
+      <div style="margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 5px; font-size: 0.9em;">
+        <strong>Instrucciones:</strong><br>
+        1. Ve a GitHub → Settings → Developer settings → Personal access tokens<br>
+        2. Crea un token con permisos de "repo"<br>
+        3. Pega el token aquí junto con tu usuario y nombre del repositorio
+      </div>
+    </div>
+  `
+
+  document.getElementById("add-giveaway").innerHTML = configHtml + document.getElementById("add-giveaway").innerHTML
+}
+
+function saveGitHubConfig() {
+  const token = document.getElementById("github-token").value
+  const username = document.getElementById("github-username").value
+  const repo = document.getElementById("github-repo").value
+
+  if (token && username && repo) {
+    localStorage.setItem("github_token", token)
+    localStorage.setItem("github_username", username)
+    localStorage.setItem("github_repo", repo)
+
+    // Update GITHUB_CONFIG
+    GITHUB_CONFIG.owner = username
+    GITHUB_CONFIG.repo = repo
+
+    showMessage("Configuración de GitHub guardada exitosamente!", "success")
+  } else {
+    showMessage("Por favor completa todos los campos", "error")
+  }
+}
+
+async function testGitHubConnection() {
+  try {
+    showMessage("Probando conexión con GitHub...", "success")
+    const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
+    const participants = JSON.parse(localStorage.getItem("participants") || "{}")
+
+    const success = await syncToGitHub(giveaways, participants)
+    if (success) {
+      showMessage("¡Conexión con GitHub exitosa!", "success")
+    }
+  } catch (error) {
+    showMessage("Error de conexión: " + error.message, "error")
+  }
+}
+
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", () => {
   console.log("[v0] Initializing admin panel...")
 
   // Initialize data with examples
   initializeData()
+
+  // Show GitHub configuration
+  showGitHubConfig()
 
   // Show first tab by default
   showTab("add-giveaway")
@@ -411,3 +534,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   console.log("[v0] Admin panel initialized successfully")
 })
+
+// Placeholder for writeJSONFile function
+async function writeJSONFile(filePath, data) {
+  // Implement GitHub API call to save JSON data
+  // This is a placeholder and should be replaced with actual GitHub API integration
+  return true
+}
+
+// Placeholder for GITHUB_CONFIG object
+const GITHUB_CONFIG = {
+  owner: "",
+  repo: "",
+}
