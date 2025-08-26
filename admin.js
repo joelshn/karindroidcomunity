@@ -25,9 +25,43 @@ function showTab(tabName) {
   }
 }
 
+// Initialize data with examples if not exists
+function initializeData() {
+  if (!localStorage.getItem("giveaways")) {
+    const exampleGiveaways = [
+      {
+        id: "example1",
+        name: "Dominus Empyreus",
+        image: "/dominus-empyreus-roblox-hat.png",
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+        description: "Increíble Dominus Empyreus para el ganador!",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "example2",
+        name: "1000 Robux",
+        image: "/robux-roblox-currency.png",
+        endDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
+        description: "1000 Robux directos a tu cuenta!",
+        createdAt: new Date().toISOString(),
+      },
+    ]
+    localStorage.setItem("giveaways", JSON.stringify(exampleGiveaways))
+  }
+
+  if (!localStorage.getItem("participants")) {
+    const exampleParticipants = {
+      example1: ["Player123", "GamerPro456", "RobloxFan789", "NoobMaster2024", "BuilderKing"],
+      example2: ["CoolPlayer1", "AwesomeGamer", "RobloxLover"],
+    }
+    localStorage.setItem("participants", JSON.stringify(exampleParticipants))
+  }
+}
+
 // Add new giveaway
-async function addGiveaway(event) {
+function addGiveaway(event) {
   event.preventDefault()
+  console.log("[v0] Adding new giveaway...")
 
   const formData = new FormData(event.target)
   const giveaway = {
@@ -39,40 +73,47 @@ async function addGiveaway(event) {
     createdAt: new Date().toISOString(),
   }
 
+  console.log("[v0] New giveaway data:", giveaway)
+
   try {
-    const giveaways = (await readJSONFile("data/giveaways.json")) || []
+    const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
     giveaways.push(giveaway)
+    localStorage.setItem("giveaways", JSON.stringify(giveaways))
 
-    const success = await writeJSONFile("data/giveaways.json", giveaways)
+    console.log("[v0] Giveaway saved successfully")
+    showMessage("¡Sorteo creado exitosamente!", "success")
+    event.target.reset()
 
-    if (success) {
-      showMessage("Sorteo creado exitosamente!", "success")
-      event.target.reset()
-    } else {
-      showMessage("Error al crear el sorteo.", "error")
+    // Refresh the manage tab if it's visible
+    if (document.getElementById("manage-giveaways").style.display !== "none") {
+      loadAdminGiveaways()
     }
   } catch (error) {
-    console.error("Error adding giveaway:", error)
+    console.error("[v0] Error adding giveaway:", error)
     showMessage("Error al crear el sorteo.", "error")
   }
 }
 
 // Load giveaways for admin management
-async function loadAdminGiveaways() {
+function loadAdminGiveaways() {
+  console.log("[v0] Loading admin giveaways...")
   const listDiv = document.getElementById("admin-giveaways-list")
 
   try {
-    const giveaways = (await readJSONFile("data/giveaways.json")) || []
-    const participants = (await readJSONFile("data/participants.json")) || {}
+    const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
+    const participants = JSON.parse(localStorage.getItem("participants") || "{}")
+
+    console.log("[v0] Loaded giveaways:", giveaways)
+    console.log("[v0] Loaded participants:", participants)
 
     if (giveaways.length === 0) {
       listDiv.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #666;">
-                    <i class="fas fa-gift" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
-                    <h3>No hay sorteos creados</h3>
-                    <p>Crea tu primer sorteo en la pestaña "Agregar Sorteo"</p>
-                </div>
-            `
+        <div style="text-align: center; padding: 40px; color: #666;">
+          <i class="fas fa-gift" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
+          <h3>No hay sorteos creados</h3>
+          <p>Crea tu primer sorteo en la pestaña "Agregar Sorteo"</p>
+        </div>
+      `
       return
     }
 
@@ -84,65 +125,65 @@ async function loadAdminGiveaways() {
         const statusColor = isActive ? "#28a745" : "#6c757d"
 
         return `
-                <div class="giveaway-card">
-                    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-                        <img src="${giveaway.image}" alt="${giveaway.name}" 
-                             style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px;"
-                             onerror="this.src='/roblox-brainrot.png'">
-                        <div style="flex: 1; min-width: 200px;">
-                            <h3>${giveaway.name}</h3>
-                            <div class="giveaway-meta">
-                                <div class="meta-item">
-                                    <i class="fas fa-calendar"></i>
-                                    <span>Termina: ${formatDate(giveaway.endDate)}</span>
-                                </div>
-                                <div class="meta-item">
-                                    <i class="fas fa-users"></i>
-                                    <span>${participantCount} participantes</span>
-                                </div>
-                                <div class="meta-item">
-                                    <i class="fas fa-circle" style="color: ${statusColor};"></i>
-                                    <span>${status}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 10px; flex-direction: column;">
-                            <button class="btn-danger" onclick="deleteGiveaway('${giveaway.id}')">
-                                <i class="fas fa-trash"></i> Eliminar
-                            </button>
-                            ${
-                              isActive
-                                ? `<button class="btn-primary" onclick="endGiveaway('${giveaway.id}')">
-                                <i class="fas fa-stop"></i> Finalizar
-                            </button>`
-                                : ""
-                            }
-                        </div>
-                    </div>
+          <div class="giveaway-card">
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+              <img src="${giveaway.image}" alt="${giveaway.name}" 
+                   style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px;"
+                   onerror="this.src='/generic-virtual-item.png'">
+              <div style="flex: 1; min-width: 200px;">
+                <h3>${giveaway.name}</h3>
+                <div class="giveaway-meta">
+                  <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>Termina: ${formatDate(giveaway.endDate)}</span>
+                  </div>
+                  <div class="meta-item">
+                    <i class="fas fa-users"></i>
+                    <span>${participantCount} participantes</span>
+                  </div>
+                  <div class="meta-item">
+                    <i class="fas fa-circle" style="color: ${statusColor};"></i>
+                    <span>${status}</span>
+                  </div>
                 </div>
-            `
+              </div>
+              <div style="display: flex; gap: 10px; flex-direction: column;">
+                <button class="btn-danger" onclick="deleteGiveaway('${giveaway.id}')">
+                  <i class="fas fa-trash"></i> Eliminar
+                </button>
+                ${
+                  isActive
+                    ? `<button class="btn-primary" onclick="endGiveaway('${giveaway.id}')">
+                  <i class="fas fa-stop"></i> Finalizar
+                </button>`
+                    : ""
+                }
+              </div>
+            </div>
+          </div>
+        `
       })
       .join("")
   } catch (error) {
-    console.error("Error loading admin giveaways:", error)
+    console.error("[v0] Error loading admin giveaways:", error)
     listDiv.innerHTML = `
-            <div class="error">
-                <i class="fas fa-exclamation-triangle"></i> 
-                Error al cargar los sorteos.
-            </div>
-        `
+      <div class="error">
+        <i class="fas fa-exclamation-triangle"></i> 
+        Error al cargar los sorteos.
+      </div>
+    `
   }
 }
 
 // Delete giveaway
-async function deleteGiveaway(giveawayId) {
+function deleteGiveaway(giveawayId) {
   if (!confirm("¿Estás seguro de que quieres eliminar este sorteo?")) {
     return
   }
 
   try {
-    const giveaways = (await readJSONFile("data/giveaways.json")) || []
-    const participants = (await readJSONFile("data/participants.json")) || {}
+    const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
+    const participants = JSON.parse(localStorage.getItem("participants") || "{}")
 
     // Remove giveaway
     const updatedGiveaways = giveaways.filter((g) => g.id !== giveawayId)
@@ -150,15 +191,11 @@ async function deleteGiveaway(giveawayId) {
     // Remove participants
     delete participants[giveawayId]
 
-    const success1 = await writeJSONFile("data/giveaways.json", updatedGiveaways)
-    const success2 = await writeJSONFile("data/participants.json", participants)
+    localStorage.setItem("giveaways", JSON.stringify(updatedGiveaways))
+    localStorage.setItem("participants", JSON.stringify(participants))
 
-    if (success1 && success2) {
-      showMessage("Sorteo eliminado exitosamente!", "success")
-      loadAdminGiveaways()
-    } else {
-      showMessage("Error al eliminar el sorteo.", "error")
-    }
+    showMessage("Sorteo eliminado exitosamente!", "success")
+    loadAdminGiveaways()
   } catch (error) {
     console.error("Error deleting giveaway:", error)
     showMessage("Error al eliminar el sorteo.", "error")
@@ -166,13 +203,13 @@ async function deleteGiveaway(giveawayId) {
 }
 
 // End giveaway early
-async function endGiveaway(giveawayId) {
+function endGiveaway(giveawayId) {
   if (!confirm("¿Estás seguro de que quieres finalizar este sorteo?")) {
     return
   }
 
   try {
-    const giveaways = (await readJSONFile("data/giveaways.json")) || []
+    const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
 
     // Update end date to now
     const updatedGiveaways = giveaways.map((g) => {
@@ -182,14 +219,10 @@ async function endGiveaway(giveawayId) {
       return g
     })
 
-    const success = await writeJSONFile("data/giveaways.json", updatedGiveaways)
+    localStorage.setItem("giveaways", JSON.stringify(updatedGiveaways))
 
-    if (success) {
-      showMessage("Sorteo finalizado exitosamente!", "success")
-      loadAdminGiveaways()
-    } else {
-      showMessage("Error al finalizar el sorteo.", "error")
-    }
+    showMessage("Sorteo finalizado exitosamente!", "success")
+    loadAdminGiveaways()
   } catch (error) {
     console.error("Error ending giveaway:", error)
     showMessage("Error al finalizar el sorteo.", "error")
@@ -197,12 +230,12 @@ async function endGiveaway(giveawayId) {
 }
 
 // Load active giveaways for drawing winners
-async function loadActiveGiveawaysForDraw() {
+function loadActiveGiveawaysForDraw() {
   const listDiv = document.getElementById("active-giveaways-for-draw")
 
   try {
-    const giveaways = (await readJSONFile("data/giveaways.json")) || []
-    const participants = (await readJSONFile("data/participants.json")) || {}
+    const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
+    const participants = JSON.parse(localStorage.getItem("participants") || "{}")
 
     const now = new Date()
     const endedGiveaways = giveaways.filter(
@@ -211,12 +244,12 @@ async function loadActiveGiveawaysForDraw() {
 
     if (endedGiveaways.length === 0) {
       listDiv.innerHTML = `
-                <div style="text-align: center; padding: 40px; color: #666;">
-                    <i class="fas fa-trophy" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
-                    <h3>No hay sorteos listos para realizar</h3>
-                    <p>Los sorteos deben haber finalizado y tener participantes para poder realizar el sorteo.</p>
-                </div>
-            `
+        <div style="text-align: center; padding: 40px; color: #666;">
+          <i class="fas fa-trophy" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
+          <h3>No hay sorteos listos para realizar</h3>
+          <p>Los sorteos deben haber finalizado y tener participantes para poder realizar el sorteo.</p>
+        </div>
+      `
       return
     }
 
@@ -225,48 +258,48 @@ async function loadActiveGiveawaysForDraw() {
         const participantCount = participants[giveaway.id].length
 
         return `
-                <div class="giveaway-card">
-                    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
-                        <img src="${giveaway.image}" alt="${giveaway.name}" 
-                             style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px;"
-                             onerror="this.src='/roblox-brainrot.png'">
-                        <div style="flex: 1; min-width: 200px;">
-                            <h3>${giveaway.name}</h3>
-                            <div class="giveaway-meta">
-                                <div class="meta-item">
-                                    <i class="fas fa-calendar"></i>
-                                    <span>Finalizó: ${formatDate(giveaway.endDate)}</span>
-                                </div>
-                                <div class="meta-item">
-                                    <i class="fas fa-users"></i>
-                                    <span>${participantCount} participantes</span>
-                                </div>
-                            </div>
-                        </div>
-                        <button class="btn-success" onclick="drawWinner('${giveaway.id}')">
-                            <i class="fas fa-trophy"></i> Sortear Ganador
-                        </button>
-                    </div>
+          <div class="giveaway-card">
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+              <img src="${giveaway.image}" alt="${giveaway.name}" 
+                   style="width: 100px; height: 100px; object-fit: cover; border-radius: 10px;"
+                   onerror="this.src='/generic-virtual-item.png'">
+              <div style="flex: 1; min-width: 200px;">
+                <h3>${giveaway.name}</h3>
+                <div class="giveaway-meta">
+                  <div class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    <span>Finalizó: ${formatDate(giveaway.endDate)}</span>
+                  </div>
+                  <div class="meta-item">
+                    <i class="fas fa-users"></i>
+                    <span>${participantCount} participantes</span>
+                  </div>
                 </div>
-            `
+              </div>
+              <button class="btn-success" onclick="drawWinner('${giveaway.id}')">
+                <i class="fas fa-trophy"></i> Sortear Ganador
+              </button>
+            </div>
+          </div>
+        `
       })
       .join("")
   } catch (error) {
     console.error("Error loading giveaways for draw:", error)
     listDiv.innerHTML = `
-            <div class="error">
-                <i class="fas fa-exclamation-triangle"></i> 
-                Error al cargar los sorteos.
-            </div>
-        `
+      <div class="error">
+        <i class="fas fa-exclamation-triangle"></i> 
+        Error al cargar los sorteos.
+      </div>
+    `
   }
 }
 
 // Draw winner
-async function drawWinner(giveawayId) {
+function drawWinner(giveawayId) {
   try {
-    const giveaways = (await readJSONFile("data/giveaways.json")) || []
-    const participants = (await readJSONFile("data/participants.json")) || {}
+    const giveaways = JSON.parse(localStorage.getItem("giveaways") || "[]")
+    const participants = JSON.parse(localStorage.getItem("participants") || "{}")
 
     const giveaway = giveaways.find((g) => g.id === giveawayId)
     const giveawayParticipants = participants[giveawayId] || []
@@ -282,16 +315,16 @@ async function drawWinner(giveawayId) {
 
     // Show winner announcement
     const announcement = `
-            <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; margin: 20px 0;">
-                <i class="fas fa-trophy" style="font-size: 4rem; margin-bottom: 20px; color: #ffd700;"></i>
-                <h2>¡Tenemos un Ganador!</h2>
-                <h3 style="font-size: 2rem; margin: 20px 0;">${winner}</h3>
-                <p>Ha ganado: <strong>${giveaway.name}</strong></p>
-                <button class="btn-primary" onclick="copyWinnerInfo('${winner}', '${giveaway.name}')" style="margin-top: 20px;">
-                    <i class="fas fa-copy"></i> Copiar Información del Ganador
-                </button>
-            </div>
-        `
+      <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 15px; margin: 20px 0;">
+        <i class="fas fa-trophy" style="font-size: 4rem; margin-bottom: 20px; color: #ffd700;"></i>
+        <h2>¡Tenemos un Ganador!</h2>
+        <h3 style="font-size: 2rem; margin: 20px 0;">${winner}</h3>
+        <p>Ha ganado: <strong>${giveaway.name}</strong></p>
+        <button class="btn-primary" onclick="copyWinnerInfo('${winner}', '${giveaway.name}')" style="margin-top: 20px;">
+          <i class="fas fa-copy"></i> Copiar Información del Ganador
+        </button>
+      </div>
+    `
 
     document.getElementById("active-giveaways-for-draw").innerHTML =
       announcement + document.getElementById("active-giveaways-for-draw").innerHTML
@@ -317,10 +350,53 @@ function copyWinnerInfo(winner, prize) {
     })
 }
 
+// Utility functions
+function generateId() {
+  return Math.random().toString(36).substr(2, 9)
+}
+
+function showMessage(message, type) {
+  const messageDiv = document.createElement("div")
+  messageDiv.className = `message ${type}`
+  messageDiv.textContent = message
+  messageDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 5px;
+    color: white;
+    font-weight: bold;
+    z-index: 10000;
+    max-width: 300px;
+    ${type === "success" ? "background-color: #28a745;" : "background-color: #dc3545;"}
+  `
+  document.body.appendChild(messageDiv)
+
+  setTimeout(() => {
+    if (document.body.contains(messageDiv)) {
+      document.body.removeChild(messageDiv)
+    }
+  }, 3000)
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString)
+  return date.toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
 // Initialize admin panel
 document.addEventListener("DOMContentLoaded", () => {
-  // Check GitHub token configuration
-  checkGitHubToken()
+  console.log("[v0] Initializing admin panel...")
+
+  // Initialize data with examples
+  initializeData()
 
   // Show first tab by default
   showTab("add-giveaway")
@@ -332,155 +408,6 @@ document.addEventListener("DOMContentLoaded", () => {
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
     endDateInput.min = now.toISOString().slice(0, 16)
   }
+
+  console.log("[v0] Admin panel initialized successfully")
 })
-
-// Declare necessary functions and variables
-function generateId() {
-  return Math.random().toString(36).substr(2, 9)
-}
-
-async function readJSONFile(filePath) {
-  try {
-    const token = getGitHubToken()
-    if (!token) {
-      console.error("GitHub token not configured")
-      return filePath.includes("participants") ? {} : []
-    }
-
-    const response = await fetch(`https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/${filePath}`, {
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: "application/vnd.github.v3+json",
-      },
-    })
-
-    if (response.status === 404) {
-      // File doesn't exist, return empty array/object
-      return filePath.includes("participants") ? {} : []
-    }
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const content = atob(data.content)
-    return JSON.parse(content)
-  } catch (error) {
-    console.error("Error reading JSON file:", error)
-    return filePath.includes("participants") ? {} : []
-  }
-}
-
-async function writeJSONFile(filePath, data) {
-  try {
-    const token = getGitHubToken()
-    if (!token) {
-      showMessage("Token de GitHub no configurado. Configúralo primero.", "error")
-      return false
-    }
-
-    // First, try to get the current file to get its SHA
-    let sha = null
-    try {
-      const currentFile = await fetch(`https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/${filePath}`, {
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: "application/vnd.github.v3+json",
-        },
-      })
-
-      if (currentFile.ok) {
-        const currentData = await currentFile.json()
-        sha = currentData.sha
-      }
-    } catch (e) {
-      // File doesn't exist, that's ok
-    }
-
-    const content = btoa(JSON.stringify(data, null, 2))
-
-    const body = {
-      message: `Update ${filePath}`,
-      content: content,
-      ...(sha && { sha }),
-    }
-
-    const response = await fetch(`https://api.github.com/repos/YOUR_USERNAME/YOUR_REPO/contents/${filePath}`, {
-      method: "PUT",
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: "application/vnd.github.v3+json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error("GitHub API Error:", errorData)
-      throw new Error(`GitHub API error: ${response.status}`)
-    }
-
-    return true
-  } catch (error) {
-    console.error("Error writing JSON file:", error)
-    showMessage(`Error al escribir archivo: ${error.message}`, "error")
-    return false
-  }
-}
-
-function getGitHubToken() {
-  return localStorage.getItem("github_token")
-}
-
-function setGitHubToken() {
-  const token = prompt("Ingresa tu token de GitHub (se guardará localmente):")
-  if (token) {
-    localStorage.setItem("github_token", token)
-    showMessage("Token de GitHub configurado correctamente!", "success")
-  }
-}
-
-function checkGitHubToken() {
-  const token = getGitHubToken()
-  if (!token) {
-    const setupDiv = document.createElement("div")
-    setupDiv.innerHTML = `
-      <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 20px; margin: 20px 0; border-radius: 10px;">
-        <h3><i class="fas fa-exclamation-triangle" style="color: #f39c12;"></i> Configuración Requerida</h3>
-        <p>Para que el panel de administración funcione, necesitas configurar un token de GitHub.</p>
-        <ol>
-          <li>Ve a <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings > Developer settings > Personal access tokens</a></li>
-          <li>Crea un nuevo token con permisos de "repo"</li>
-          <li>Copia el token y haz clic en el botón de abajo</li>
-        </ol>
-        <button class="btn-primary" onclick="setGitHubToken()">
-          <i class="fas fa-key"></i> Configurar Token de GitHub
-        </button>
-        <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
-          <strong>Nota:</strong> También necesitas reemplazar "YOUR_USERNAME" y "YOUR_REPO" en el código con tu información real de GitHub.
-        </p>
-      </div>
-    `
-    document
-      .querySelector(".admin-container")
-      .insertBefore(setupDiv, document.querySelector(".admin-container").firstChild)
-  }
-}
-
-function showMessage(message, type) {
-  const messageDiv = document.createElement("div")
-  messageDiv.className = `message ${type}`
-  messageDiv.textContent = message
-  document.body.appendChild(messageDiv)
-
-  setTimeout(() => {
-    document.body.removeChild(messageDiv)
-  }, 3000)
-}
-
-function formatDate(dateString) {
-  const date = new Date(dateString)
-  return date.toLocaleDateString()
-}
