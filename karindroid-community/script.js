@@ -21,9 +21,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // GitHub API configuration
 const GITHUB_CONFIG = {
-  owner: "YOUR_GITHUB_USERNAME", // Replace with your GitHub username
-  repo: "YOUR_REPO_NAME", // Replace with your repository name
-  token: "YOUR_GITHUB_TOKEN", // Replace with your GitHub token
+  owner: "joelshn", // Replace with your GitHub username
+  repo: "karindroidcomunity", // Replace with your repository name
+  token: "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", // Replace with your GitHub token
   branch: "main",
 }
 
