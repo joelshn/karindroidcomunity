@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Karindroid Community</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Panel de Administración</h2>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link">Volver al Sitio</a>
+            </div>
+        </div>
+    </nav>
+
+    <main style="padding-top: 100px;">
+        <div class="container">
+            <div class="admin-container">
+                <h1 style="text-align: center; color: #333; margin-bottom: 40px;">
+                    <i class="fas fa-cog"></i> Panel de Administración
+                </h1>
+
+                <div id="admin-tabs" style="text-align: center; margin-bottom: 40px;">
+                    <button class="btn-primary" onclick="showTab('add-giveaway')" id="tab-add">Agregar Sorteo</button>
+                    <button class="btn-primary" onclick="showTab('manage-giveaways')" id="tab-manage">Gestionar Sorteos</button>
+                    <button class="btn-primary" onclick="showTab('draw-winner')" id="tab-draw">Realizar Sorteo</button>
+                </div>
+
+                <!-- Add Giveaway Tab -->
+                <div id="add-giveaway" class="tab-content">
+                    <h2 style="text-align: center; margin-bottom: 30px;">Agregar Nuevo Sorteo</h2>
+                    <form class="admin-form" onsubmit="addGiveaway(event)">
+                        <div class="form-group">
+                            <label for="item-name">Nombre del Artículo:</label>
+                            <input type="text" id="item-name" name="item-name" required 
+                                   placeholder="Ej: Brainrot Épico">
+                        </div>
+                        <div class="form-group">
+                            <label for="item-image">URL de la Imagen:</label>
+                            <input type="url" id="item-image" name="item-image" required 
+                                   placeholder="https://ejemplo.com/imagen.jpg">
+                        </div>
+                        <div class="form-group">
+                            <label for="end-date">Fecha de Finalización:</label>
+                            <input type="datetime-local" id="end-date" name="end-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="description">Descripción (opcional):</label>
+                            <textarea id="description" name="description" rows="3" 
+                                      placeholder="Descripción del artículo..."></textarea>
+                        </div>
+                        <button type="submit" class="btn-success">
+                            <i class="fas fa-plus"></i> Crear Sorteo
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Manage Giveaways Tab -->
+                <div id="manage-giveaways" class="tab-content" style="display: none;">
+                    <h2 style="text-align: center; margin-bottom: 30px;">Gestionar Sorteos</h2>
+                    <div id="admin-giveaways-list" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando sorteos...
+                    </div>
+                </div>
+
+                <!-- Draw Winner Tab -->
+                <div id="draw-winner" class="tab-content" style="display: none;">
+                    <h2 style="text-align: center; margin-bottom: 30px;">Realizar Sorteo</h2>
+                    <div id="active-giveaways-for-draw" class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando sorteos activos...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Karindroid Community. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>

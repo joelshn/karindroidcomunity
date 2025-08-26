@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Participar en Sorteo - Karindroid Community</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Karindroid Community</h2>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="index.html" class="nav-link">Inicio</a>
+                <a href="sorteos.html" class="nav-link">Sorteos</a>
+                <a href="index.html#about" class="nav-link">Acerca de</a>
+                <a href="index.html#contact" class="nav-link">Contacto</a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <main style="padding-top: 100px;">
+        <div class="container">
+            <div class="giveaway-container">
+                <h1 style="text-align: center; color: #333; margin-bottom: 40px;">
+                    <i class="fas fa-user-plus"></i> Participar en Sorteo
+                </h1>
+                
+                <div id="giveaway-details" class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando información del sorteo...
+                </div>
+
+                <div id="participation-form" style="display: none;">
+                    <form class="admin-form" onsubmit="participateInGiveaway(event)">
+                        <div class="form-group">
+                            <label for="roblox-username">Nombre de Usuario de Roblox:</label>
+                            <input type="text" id="roblox-username" name="roblox-username" required 
+                                   placeholder="Ingresa tu username de Roblox">
+                        </div>
+                        <button type="submit" class="btn-success">
+                            <i class="fas fa-check"></i> Participar en el Sorteo
+                        </button>
+                    </form>
+                </div>
+
+                <div id="already-registered" style="display: none; text-align: center;">
+                    <div class="success">
+                        <i class="fas fa-check-circle"></i> Ya estás registrado en este sorteo
+                    </div>
+                    <a href="sorteos.html" class="btn-primary">Volver a Sorteos</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Karindroid Community. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="participate.js"></script>
+</body>
+</html>
