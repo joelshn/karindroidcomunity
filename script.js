@@ -65,16 +65,42 @@ async function githubRequest(endpoint, method = "GET", data = null) {
 
 async function readJSONFile(filename) {
   try {
+    // First try GitHub API
     const response = await githubRequest(filename)
     const content = atob(response.content)
     return JSON.parse(content)
   } catch (error) {
-    if (error.message.includes("404")) {
-      // File doesn't exist, return appropriate default
-      return filename.includes("participants") ? {} : []
+    console.warn(`GitHub API failed for ${filename}, trying direct fetch:`, error)
+
+    // Fallback to direct file fetch (for local files)
+    try {
+      const response = await fetch(filename)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return await response.json()
+    } catch (fetchError) {
+      console.error(`Both GitHub API and direct fetch failed for ${filename}:`, fetchError)
+
+      // Return default data structure
+      if (filename.includes("participants")) {
+        return {}
+      } else if (filename.includes("giveaways")) {
+        // Return example giveaway data if file doesn't exist
+        return [
+          {
+            id: "example-dominus",
+            name: "Dominus Empyreus",
+            description: "¡Gana este increíble Dominus Empyreus para tu avatar de Roblox!",
+            image: "https://tr.rbxcdn.com/38c6edcbcf3baf3b6f4e6e5f8b5c4a2a/420/420/Hat/Png",
+            endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+            createdAt: new Date().toISOString(),
+            status: "active",
+          },
+        ]
+      }
+      return []
     }
-    console.error(`Error reading ${filename}:`, error)
-    return filename.includes("participants") ? {} : []
   }
 }
 
@@ -102,11 +128,14 @@ async function writeJSONFile(filename, data) {
     }
 
     await githubRequest(filename, "PUT", payload)
+    showMessage("Datos guardados correctamente", "success")
     return true
   } catch (error) {
     console.error(`Error writing ${filename}:`, error)
-    if (error.message.includes("GitHub token not configured")) {
-      showMessage("Token de GitHub no configurado. Ve al panel de administración para configurarlo.", "error")
+    if (error.message.includes("GitHub token not configured") || error.message.includes("401")) {
+      showMessage("Error de autenticación: Configura tu token de GitHub en el panel de administración", "error")
+    } else {
+      showMessage(`Error al guardar: ${error.message}`, "error")
     }
     return false
   }

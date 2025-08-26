@@ -2,9 +2,21 @@
 async function loadGiveaways() {
   const giveawaysList = document.getElementById("giveaways-list")
 
+  // Declare readJSONFile function
+  function readJSONFile(filePath) {
+    return fetch(filePath)
+      .then((response) => response.json())
+      .catch((error) => {
+        throw new Error(`Error reading JSON file ${filePath}: ${error.message}`)
+      })
+  }
+
   try {
     const giveaways = await readJSONFile("data/giveaways.json")
     const participants = await readJSONFile("data/participants.json")
+
+    console.log("[v0] Loaded giveaways:", giveaways)
+    console.log("[v0] Loaded participants:", participants)
 
     if (!giveaways || giveaways.length === 0) {
       giveawaysList.innerHTML = `
@@ -19,6 +31,8 @@ async function loadGiveaways() {
 
     const now = new Date()
     const activeGiveaways = giveaways.filter((g) => new Date(g.endDate) > now)
+
+    console.log("[v0] Active giveaways:", activeGiveaways)
 
     if (activeGiveaways.length === 0) {
       giveawaysList.innerHTML = `
@@ -40,7 +54,7 @@ async function loadGiveaways() {
                 <div class="giveaway-card">
                     <div style="display: flex; gap: 30px; align-items: center; flex-wrap: wrap;">
                         <img src="${giveaway.image}" alt="${giveaway.name}" class="giveaway-image" 
-                             onerror="this.src='/roblox-brainrot.png'">
+                             onerror="this.src='https://via.placeholder.com/150x150/667eea/ffffff?text=Roblox+Item'">
                         <div class="giveaway-info" style="flex: 1; min-width: 250px;">
                             <h3>${giveaway.name}</h3>
                             ${giveaway.description ? `<p style="color: #666; margin-bottom: 15px;">${giveaway.description}</p>` : ""}
@@ -96,15 +110,6 @@ function getTimeLeft(endDate) {
 
 // Load giveaways when page loads
 document.addEventListener("DOMContentLoaded", loadGiveaways)
-
-// Declare readJSONFile function
-async function readJSONFile(filePath) {
-  const response = await fetch(filePath)
-  if (!response.ok) {
-    throw new Error(`Failed to load ${filePath}`)
-  }
-  return response.json()
-}
 
 // Declare formatDate function
 function formatDate(dateString) {
